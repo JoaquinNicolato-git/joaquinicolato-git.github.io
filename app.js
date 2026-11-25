@@ -32,8 +32,6 @@ let compras = JSON.parse(localStorage.getItem('cookstock_compras')) || [];
 let fechaCalendario = new Date();
 let html5QrcodeScanner = null;
 let pedidoEnProduccionId = null;
-let ultimaLecturaCandidata = '';
-let contadorLecturaIgual = 0;
 
 function guardarTodo() {
     localStorage.setItem('cookstock_catalogo', JSON.stringify(catalogo));
@@ -418,8 +416,6 @@ const inpCodigo = document.getElementById('inpCodigo');
 document.getElementById('btnAbrirEscaner').addEventListener('click', () => {
     modalEscaner.classList.remove('hidden');
     document.getElementById('inpVencimiento').value = sumarDiasHoy(30);
-    ultimaLecturaCandidata = '';
-    contadorLecturaIgual = 0;
 });
 document.getElementById('btnCerrarModal').addEventListener('click', cerrarModalEscaner);
 
@@ -434,8 +430,6 @@ function detenerCamaraSegura() {
             }
         } catch (_) { }
     }
-    ultimaLecturaCandidata = '';
-    contadorLecturaIgual = 0;
 }
 
 function cerrarModalEscaner() {
@@ -479,8 +473,6 @@ document.getElementById('btnIniciarCamara').addEventListener('click', () => {
     }
 
     detenerCamaraSegura();
-    ultimaLecturaCandidata = '';
-    contadorLecturaIgual = 0;
 
     const formatosPermitidos = typeof Html5QrcodeSupportedFormats !== 'undefined'
         ? [
@@ -497,37 +489,25 @@ document.getElementById('btnIniciarCamara').addEventListener('click', () => {
         : new Html5Qrcode("reader");
 
     const estado = document.getElementById('estadoCodigo');
-    estado.textContent = '📷 Mantené el código estable dentro del recuadro para confirmar la lectura...';
+    estado.textContent = '📷 Alejá un poco el producto hasta que el código se vea nítido dentro del recuadro.';
     estado.style.color = '';
 
     html5QrcodeScanner.start(
         { facingMode: "environment" },
         {
-            fps: 12,
-            qrbox: { width: 280, height: 130 },
-            aspectRatio: 1.777778,
+            fps: 10,
+            qrbox: (viewfinderWidth, viewfinderHeight) => {
+                const ancho = Math.min(340, Math.max(220, Math.floor(viewfinderWidth * 0.85)));
+                const alto = Math.min(180, Math.max(120, Math.floor(viewfinderHeight * 0.45)));
+                return { width: ancho, height: alto };
+            },
             videoConstraints: {
-                facingMode: { ideal: "environment" },
-                width: { ideal: 1280 },
-                height: { ideal: 720 },
-                focusMode: "continuous"
+                facingMode: { ideal: "environment" }
             }
         },
         (decodedText) => {
             const limpio = (decodedText || '').replace(/\D/g, '').trim() || (decodedText || '').trim();
-            if (!limpio || limpio.length < 8) return;
-
-            if (limpio === ultimaLecturaCandidata) {
-                contadorLecturaIgual += 1;
-            } else {
-                ultimaLecturaCandidata = limpio;
-                contadorLecturaIgual = 1;
-            }
-
-            if (contadorLecturaIgual < 2) {
-                estado.textContent = `🔍 Leyendo ${limpio}... mantené firme un instante para confirmar.`;
-                return;
-            }
+            if (!limpio || limpio.length < 7) return;
 
             if (navigator.vibrate) navigator.vibrate(100);
             inpCodigo.value = limpio;
