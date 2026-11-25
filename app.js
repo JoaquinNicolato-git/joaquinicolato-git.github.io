@@ -501,16 +501,17 @@ document.getElementById('btnIniciarCamara').addEventListener('click', () => {
     estado.style.color = '';
 
     html5QrcodeScanner.start(
-        {
-            facingMode: "environment",
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            focusMode: "continuous"
-        },
+        { facingMode: "environment" },
         {
             fps: 12,
             qrbox: { width: 280, height: 130 },
-            aspectRatio: 1.777778
+            aspectRatio: 1.777778,
+            videoConstraints: {
+                facingMode: { ideal: "environment" },
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                focusMode: "continuous"
+            }
         },
         (decodedText) => {
             const limpio = (decodedText || '').replace(/\D/g, '').trim() || (decodedText || '').trim();
