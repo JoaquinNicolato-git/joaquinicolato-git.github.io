@@ -30,34 +30,41 @@ body {
     overflow-x: hidden;
 }
 
-/* Encabezado superior y logo */
+/* Encabezado superior estético con logo centrado y campana de silueta */
 .topbar {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    padding: 10px 24px;
-    min-height: 92px;
-    display: flex;
-    justify-content: space-between;
+    padding: 14px 24px;
+    min-height: 112px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
     position: sticky;
     top: 0;
     z-index: 10;
+    box-shadow: 0 2px 12px rgba(45, 41, 40, 0.03);
+}
+
+.topbar-spacer {
+    min-width: 0;
 }
 
 .brand {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    flex-shrink: 0;
+    justify-content: center;
 }
 
 .brand-logo {
-    height: 76px;
+    height: 92px;
     width: auto;
-    max-width: 260px;
+    max-width: 320px;
     object-fit: contain;
     display: block;
+    border-radius: 14px;
+    padding: 4px 10px;
+    background: #fdfbfa;
 }
 
 .topbar-actions {
@@ -68,22 +75,60 @@ body {
     flex-wrap: wrap;
 }
 
+.btn-bell {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.2s, border-color 0.2s, transform 0.15s;
+}
+
+.btn-bell:hover {
+    background: var(--accent);
+    border-color: var(--accent-dark);
+    transform: translateY(-1px);
+}
+
+.bell-icon {
+    width: 21px;
+    height: 21px;
+    display: block;
+}
+
+.stock-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
 /* Botones y badges */
 .btn-primary {
     background: var(--primary);
     color: #fff;
     border: none;
-    padding: 9px 15px;
-    border-radius: 8px;
+    padding: 10px 18px;
+    border-radius: 10px;
     font-weight: 500;
     cursor: pointer;
-    transition: opacity 0.2s;
+    transition: opacity 0.2s, transform 0.15s;
     white-space: nowrap;
-    font-size: 0.88rem;
+    font-size: 0.9rem;
 }
 
 .btn-primary:hover {
-    opacity: 0.9;
+    opacity: 0.92;
+}
+
+.btn-primary:active {
+    transform: scale(0.99);
 }
 
 .btn-primary.full {
@@ -138,12 +183,20 @@ body {
 }
 
 .badge {
+    position: absolute;
+    top: -3px;
+    right: -3px;
     background: var(--rojo-txt);
     color: #ffffff;
-    font-size: 0.7rem;
-    padding: 2px 6px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
     border-radius: 99px;
-    margin-left: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .badge-soft {
@@ -659,13 +712,13 @@ textarea {
 /* Responsivo tablet */
 @media (max-width: 900px) {
     .topbar {
-        padding: 10px 14px;
-        gap: 10px;
+        padding: 12px 16px;
+        min-height: 98px;
     }
 
     .brand-logo {
-        height: 64px;
-        max-width: 220px;
+        height: 78px;
+        max-width: 270px;
     }
 
     .compra-inline {
@@ -676,29 +729,29 @@ textarea {
 /* Responsivo celular */
 @media (max-width: 768px) {
     .topbar {
-        flex-direction: column;
-        align-items: stretch;
-        padding: 10px 14px 12px;
-        gap: 10px;
-        min-height: auto;
-    }
-
-    .brand {
-        justify-content: flex-start;
+        grid-template-columns: 44px 1fr 44px;
+        padding: 12px 14px;
+        min-height: 96px;
+        gap: 8px;
     }
 
     .brand-logo {
-        height: 64px;
-        max-width: 230px;
+        height: 76px;
+        max-width: 245px;
     }
 
-    .topbar-actions {
-        justify-content: flex-end;
+    .btn-bell {
+        width: 40px;
+        height: 40px;
+    }
+
+    .stock-toolbar {
+        justify-content: stretch;
+        margin-bottom: 14px;
+    }
+
+    .stock-toolbar .btn-primary {
         width: 100%;
-    }
-
-    .topbar-actions .btn-primary {
-        flex: 1;
         text-align: center;
     }
 

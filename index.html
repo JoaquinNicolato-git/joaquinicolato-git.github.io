@@ -12,21 +12,27 @@
 <body>
 
     <header class="topbar">
+        <div class="topbar-spacer" aria-hidden="true"></div>
         <div class="brand">
             <img src="CookStock (1).png" alt="CookStock" class="brand-logo">
         </div>
         <div class="topbar-actions">
-            <button id="btnNotificaciones" class="btn-outline" title="Ver alertas de vencimientos y entregas">
-                🔔 <span id="badgeAlertas" class="badge hidden">0</span>
+            <button id="btnNotificaciones" class="btn-bell" title="Ver alertas de vencimientos y entregas"
+                aria-label="Ver alertas">
+                <svg class="bell-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <span id="badgeAlertas" class="badge hidden">0</span>
             </button>
-            <button id="btnAbrirEscaner" class="btn-primary">+ Ingresar / Escanear</button>
         </div>
     </header>
 
     <div id="panelAlertas" class="alertas-drawer hidden">
         <div class="alertas-drawer-inner">
             <div class="alertas-header">
-                <strong>🔔 Alertas de Vencimientos y Entregas (4 días antes)</strong>
+                <strong>Alertas de Vencimientos y Entregas (4 días antes)</strong>
                 <button type="button" id="btnCerrarAlertas" class="btn-icon">✕</button>
             </div>
             <div id="listaAlertasDetalle" class="alertas-lista"></div>
@@ -44,6 +50,10 @@
     <main class="container">
         <!-- SECCIÓN 1: VENCIMIENTOS DIVIDIDOS EN SÓLIDOS Y LÍQUIDOS -->
         <section id="tab-vencimientos" class="tab-content active">
+            <div class="stock-toolbar">
+                <button id="btnAbrirEscaner" class="btn-primary">+ Ingresar / Escanear</button>
+            </div>
+
             <div class="split-grid">
                 <div class="panel">
                     <div class="panel-header">
