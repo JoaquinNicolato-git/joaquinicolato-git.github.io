@@ -35,7 +35,7 @@ let camaraActiva = false;
 let reenfoqueEnCurso = false;
 let pedidoEnProduccionId = null;
 
-// Diccionario de detecciones (inspirado en el video, adaptado a 3 lecturas para agilidad)
+// Diccionario de detecciones (confirmación en 3 lecturas para agilidad)
 let detecciones = {};
 const UMBRAL_CONFIRMACION = 3;
 
@@ -641,19 +641,56 @@ document.getElementById('btnIniciarCamara').addEventListener('click', () => {
     iniciarCamaraEscaner('📷 Mantené el teléfono a unos 15–20 cm y tocá para reenfocar.');
 });
 
-function crearRecorteCentralCanvas(bitmap, proporcionAncho = 0.7, proporcionAlto = 0.45, anchoSalida = 1600) {
+// Recorte central con margen blanco (quiet zone) para que las barras tengan aire a los costados
+function crearRecorteConMargenCanvas(bitmap, proporcionAncho = 0.75, proporcionAlto = 0.45, anchoObjetivo = 1400, margenPx = 120) {
     const sw = Math.max(1, Math.round(bitmap.width * proporcionAncho));
     const sh = Math.max(1, Math.round(bitmap.height * proporcionAlto));
     const sx = Math.max(0, Math.round((bitmap.width - sw) / 2));
     const sy = Math.max(0, Math.round((bitmap.height - sh) / 2));
 
+    const escala = Math.min(2, anchoObjetivo / sw);
+    const dw = Math.round(sw * escala);
+    const dh = Math.round(sh * escala);
+
     const canvas = document.createElement('canvas');
-    const escala = anchoSalida / sw;
-    canvas.width = Math.round(sw * escala);
-    canvas.height = Math.round(sh * escala);
+    canvas.width = dw + margenPx * 2;
+    canvas.height = dh + margenPx * 2;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bitmap, sx, sy, sw, sh, margenPx, margenPx, dw, dh);
     return canvas;
+}
+
+function decodificarConZXingCanvas(canvas) {
+    try {
+        if (!window.ZXing || !window.ZXing.BrowserMultiFormatReader) return Promise.resolve(null);
+        const hints = new Map();
+        if (window.ZXing.DecodeHintType && window.ZXing.BarcodeFormat) {
+            hints.set(window.ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+                window.ZXing.BarcodeFormat.EAN_13,
+                window.ZXing.BarcodeFormat.EAN_8,
+                window.ZXing.BarcodeFormat.UPC_A,
+                window.ZXing.BarcodeFormat.UPC_E,
+                window.ZXing.BarcodeFormat.CODE_128
+            ]);
+            hints.set(window.ZXing.DecodeHintType.TRY_HARDER, true);
+        }
+        const reader = new window.ZXing.BrowserMultiFormatReader(hints);
+        const dataUrl = canvas.toDataURL('image/png');
+        const img = new Image();
+        return new Promise((resolve) => {
+            img.onload = () => {
+                reader.decodeFromImageElement(img)
+                    .then((res) => resolve(res && res.text ? res.text : null))
+                    .catch(() => resolve(null));
+            };
+            img.onerror = () => resolve(null);
+            img.src = dataUrl;
+        });
+    } catch (_) {
+        return Promise.resolve(null);
+    }
 }
 
 async function leerCodigoDesdeArchivo(archivo) {
@@ -664,31 +701,44 @@ async function leerCodigoDesdeArchivo(archivo) {
         bitmap = await createImageBitmap(archivo);
     } catch (_) { }
 
-    // 1) Intento con BarcodeDetector nativo (foto completa y recorte central con zoom)
-    if ('BarcodeDetector' in window && bitmap) {
+    const candidatosCanvas = [];
+    if (bitmap) {
+        candidatosCanvas.push(crearRecorteConMargenCanvas(bitmap, 0.9, 0.7, 1400, 120));
+        candidatosCanvas.push(crearRecorteConMargenCanvas(bitmap, 0.7, 0.45, 1500, 140));
+        candidatosCanvas.push(crearRecorteConMargenCanvas(bitmap, 0.5, 0.3, 1600, 140));
+    }
+
+    // 1) BarcodeDetector nativo
+    if ('BarcodeDetector' in window) {
         try {
             const detector = new window.BarcodeDetector({ formats: formatosBarcode });
-
-            const codigosFull = await detector.detect(bitmap);
-            if (codigosFull && codigosFull.length > 0 && codigosFull[0].rawValue) {
-                return codigosFull[0].rawValue;
+            if (bitmap) {
+                const codigosFull = await detector.detect(bitmap);
+                if (codigosFull && codigosFull.length > 0 && codigosFull[0].rawValue) {
+                    console.log('Leído con BarcodeDetector (full):', codigosFull[0].rawValue);
+                    return codigosFull[0].rawValue;
+                }
             }
-
-            const recorteCentro = crearRecorteCentralCanvas(bitmap, 0.72, 0.45, 1600);
-            const codigosCentro = await detector.detect(recorteCentro);
-            if (codigosCentro && codigosCentro.length > 0 && codigosCentro[0].rawValue) {
-                return codigosCentro[0].rawValue;
-            }
-
-            const recorteAngosto = crearRecorteCentralCanvas(bitmap, 0.55, 0.3, 1600);
-            const codigosAngosto = await detector.detect(recorteAngosto);
-            if (codigosAngosto && codigosAngosto.length > 0 && codigosAngosto[0].rawValue) {
-                return codigosAngosto[0].rawValue;
+            for (const c of candidatosCanvas) {
+                const res = await detector.detect(c);
+                if (res && res.length > 0 && res[0].rawValue) {
+                    console.log('Leído con BarcodeDetector (recorte):', res[0].rawValue);
+                    return res[0].rawValue;
+                }
             }
         } catch (_) { }
     }
 
-    // 2) Respaldo con Html5Qrcode.scanFile (original y recorte central)
+    // 2) ZXing sobre recortes con margen blanco
+    for (const c of candidatosCanvas) {
+        const codigoZXing = await decodificarConZXingCanvas(c);
+        if (codigoZXing) {
+            console.log('Leído con ZXing:', codigoZXing);
+            return codigoZXing;
+        }
+    }
+
+    // 3) Respaldo final con Html5Qrcode.scanFile
     if (typeof Html5Qrcode !== 'undefined') {
         const lectorFoto = new Html5Qrcode("reader", { verbose: false });
         try {
@@ -696,9 +746,8 @@ async function leerCodigoDesdeArchivo(archivo) {
                 return await lectorFoto.scanFile(archivo, false);
             } catch (_) { }
 
-            if (bitmap) {
-                const canvas = crearRecorteCentralCanvas(bitmap, 0.72, 0.45, 1400);
-                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+            if (candidatosCanvas[1]) {
+                const blob = await new Promise(resolve => candidatosCanvas[1].toBlob(resolve, 'image/jpeg', 0.95));
                 if (blob) {
                     const archivoRecorte = new File([blob], 'recorte.jpg', { type: 'image/jpeg' });
                     return await lectorFoto.scanFile(archivoRecorte, false);

@@ -1,305 +1,644 @@
 <!DOCTYPE html>
-<html lang='es'>
+<html lang="es">
 
 <head>
-    <meta charset='UTF-8'>
-    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-    <title>CookStock — Stock, Recetas y Preparaciones</title>
-    <link rel='stylesheet' href='styles.css'>
-    <script src='https://unpkg.com/html5-qrcode' type='text/javascript'></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CookStock — Stock, Recetas y Entregas</title>
+    <style>
+        :root {
+            --bg: #faf7f5;
+            --card: #ffffff;
+            --text: #252220;
+            --muted: #6e6762;
+            --accent: #b85d43;
+            --accent-soft: #f5e6e0;
+            --border: #e7dfd9;
+            --ok: #2e5a42;
+            --ok-bg: #e7f3ec;
+            --warn: #7d5d24;
+            --warn-bg: #fbf2df;
+            --danger: #8f2d22;
+            --danger-bg: #fdeae7;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding-bottom: 48px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .brand {
+            font-weight: 700;
+            font-size: 1.15rem;
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        button,
+        select,
+        input {
+            font: inherit;
+        }
+
+        button {
+            cursor: pointer;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--text);
+            padding: 8px 12px;
+        }
+
+        button:hover {
+            background: #f4efec;
+        }
+
+        .btn-primary,
+        .btn-mini {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+            font-weight: 600;
+        }
+
+        .btn-primary:hover,
+        .btn-mini:hover {
+            background: #9f4d36;
+        }
+
+        .btn-mini {
+            padding: 5px 10px;
+            font-size: 0.85rem;
+        }
+
+        .btn-icon {
+            padding: 5px 9px;
+            font-size: 0.85rem;
+        }
+
+        .badge {
+            background: var(--accent);
+            color: #fff;
+            border-radius: 999px;
+            padding: 2px 7px;
+            font-size: 0.75rem;
+            margin-left: 4px;
+            font-weight: 700;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 6px;
+            padding: 10px 18px 0;
+            border-bottom: 1px solid var(--border);
+            background: var(--card);
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            border: none;
+            border-bottom: 3px solid transparent;
+            border-radius: 0;
+            background: transparent;
+            padding: 10px 14px;
+            color: var(--muted);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .container {
+            max-width: 920px;
+            margin: 18px auto;
+            padding: 0 16px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .hint {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin: 6px 0;
+        }
+
+        .lote-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            margin-bottom: 8px;
+        }
+
+        .lote-card.verde {
+            border-left: 5px solid #2e8b57;
+        }
+
+        .lote-card.amarillo {
+            border-left: 5px solid #d49b27;
+        }
+
+        .lote-card.rojo {
+            border-left: 5px solid #c93b2b;
+        }
+
+        .lote-card h4 {
+            margin: 0 0 4px;
+        }
+
+        .lote-meta {
+            font-size: 0.88rem;
+            color: var(--muted);
+        }
+
+        .lote-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dias-tag {
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: #fff;
+        }
+
+        .ing-row {
+            display: grid;
+            grid-template-columns: 1fr 95px 80px auto;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .receta-card,
+        .prep-item,
+        .compra-item,
+        .alerta-fila {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+
+        .prep-item.listo {
+            opacity: 0.72;
+        }
+
+        .compra-item.comprado strong {
+            text-decoration: line-through;
+            color: var(--muted);
+        }
+
+        .estado-pill {
+            display: inline-block;
+            margin-top: 4px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .estado-pill.ok {
+            background: var(--ok-bg);
+            color: var(--ok);
+        }
+
+        .estado-pill.faltan {
+            background: var(--warn-bg);
+            color: var(--warn);
+        }
+
+        .estado-pill.hecho {
+            background: #eceae8;
+            color: var(--muted);
+        }
+
+        .faltantes-box {
+            padding: 10px 12px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-size: 0.9rem;
+        }
+
+        .faltantes-box.ok {
+            background: var(--ok-bg);
+            color: var(--ok);
+        }
+
+        .faltantes-box.warn {
+            background: var(--warn-bg);
+            color: var(--warn);
+        }
+
+        .cal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+
+        .cal-day {
+            padding: 10px 4px;
+            text-align: center;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .cal-day.hoy {
+            border-color: var(--accent);
+            font-weight: 700;
+        }
+
+        .cal-day.con-evento {
+            background: var(--accent-soft);
+            font-weight: 600;
+        }
+
+        .cal-detalle {
+            margin-top: 12px;
+            padding: 10px;
+            border-radius: 10px;
+            background: #f7f3f0;
+            font-size: 0.9rem;
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 50;
+        }
+
+        .modal-box {
+            background: var(--card);
+            border-radius: 14px;
+            width: 100%;
+            max-width: 520px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 18px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+        }
+
+        .scanner-controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        #reader {
+            width: 100%;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #reader:empty {
+            display: none;
+            margin: 0;
+        }
+
+        .atajos-fecha {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .panel-alertas {
+            margin-bottom: 16px;
+        }
+    </style>
 </head>
 
 <body>
-
-    <header class='topbar'>
-        <div class='topbar-spacer' aria-hidden='true'></div>
-        <div class='brand'>
-            <img src='CookStock (1).png' alt='CookStock' class='brand-logo'>
-        </div>
-        <div class='topbar-actions'>
-            <button id='btnNotificaciones' class='btn-bell' title='Ver alertas de vencimientos y entregas'
-                aria-label='Ver alertas'>
-                <svg class='bell-icon' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.75'
-                    stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>
-                    <path d='M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9'></path>
-                    <path d='M13.73 21a2 2 0 0 1-3.46 0'></path>
-                </svg>
-                <span id='badgeAlertas' class='badge hidden'>0</span>
+    <header class="topbar">
+        <div class="brand">🍰 CookStock</div>
+        <div class="topbar-actions">
+            <button id="btnNotificaciones" type="button">
+                🔔 Alertas <span id="badgeAlertas" class="badge hidden">0</span>
             </button>
+            <button id="btnAbrirEscaner" class="btn-primary" type="button">+ Ingresar / Escanear</button>
         </div>
     </header>
 
-    <div id='panelAlertas' class='alertas-drawer hidden'>
-        <div class='alertas-drawer-inner'>
-            <div class='alertas-header'>
-                <strong>Alertas de Vencimientos y Entregas (4 días antes)</strong>
-                <button type='button' id='btnCerrarAlertas' class='btn-icon'>✕</button>
-            </div>
-            <div id='listaAlertasDetalle' class='alertas-lista'></div>
-        </div>
-    </div>
-
-    <nav class='tabs' aria-label='Secciones de la aplicación'>
-        <button class='tab-btn active' data-tab='vencimientos'>📦 Stock y Vencimientos</button>
-        <button class='tab-btn' data-tab='preparaciones'>🎂 Preparaciones y Calendario</button>
-        <button class='tab-btn' data-tab='recetas'>📖 Recetas</button>
-        <button class='tab-btn' data-tab='compras'>🛒 Compras <span id='badgeCompras'
-                class='badge-soft hidden'>0</span></button>
+    <nav class="tabs">
+        <button class="tab-btn active" data-tab="stock" type="button">Stock</button>
+        <button class="tab-btn" data-tab="recetas" type="button">Recetas</button>
+        <button class="tab-btn" data-tab="preparaciones" type="button">Preparaciones</button>
+        <button class="tab-btn" data-tab="calendario" type="button">Calendario</button>
+        <button class="tab-btn" data-tab="compras" type="button">
+            Compras <span id="badgeCompras" class="badge hidden">0</span>
+        </button>
     </nav>
 
-    <main class='container'>
-        <section id='tab-vencimientos' class='tab-content active'>
-            <div class='stock-toolbar'>
-                <button id='btnAbrirEscaner' class='btn-primary'>+ Ingresar / Escanear</button>
+    <main class="container">
+        <section id="panelAlertas" class="card panel-alertas hidden">
+            <div class="card-header">
+                <strong>Alertas activas</strong>
+                <button id="btnCerrarAlertas" class="btn-icon" type="button">✕</button>
+            </div>
+            <div id="listaAlertasDetalle"></div>
+        </section>
+
+        <!-- PESTAÑA STOCK -->
+        <section id="tab-stock" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <h3 style="margin:0">Sólidos</h3>
+                    <span id="countSolidos" class="hint">0 lotes</span>
+                </div>
+                <div id="listaSolidos"></div>
             </div>
 
-            <div class='split-grid'>
-                <div class='panel'>
-                    <div class='panel-header'>
-                        <h2>🌾 Sólidos y Secos</h2>
-                        <span id='countSolidos' class='counter'>0 lotes</span>
-                    </div>
-                    <div id='listaSolidos' class='lotes-stack'></div>
+            <div class="card">
+                <div class="card-header">
+                    <h3 style="margin:0">Líquidos</h3>
+                    <span id="countLiquidos" class="hint">0 lotes</span>
                 </div>
-
-                <div class='panel'>
-                    <div class='panel-header'>
-                        <h2>🥛 Líquidos y Lácteos</h2>
-                        <span id='countLiquidos' class='counter'>0 lotes</span>
-                    </div>
-                    <div id='listaLiquidos' class='lotes-stack'></div>
-                </div>
+                <div id="listaLiquidos"></div>
             </div>
         </section>
 
-        <section id='tab-preparaciones' class='tab-content'>
-            <div class='prep-grid'>
-                <div class='panel'>
-                    <h2>📝 Nueva Preparación / Pedido</h2>
-                    <form id='formPreparacion' class='form-stack'>
-                        <label>Producto a producir / vender
-                            <input type='text' id='prepProducto'
-                                placeholder='Ej: Torta personalizada 20cm o Muffins x12' required>
-                        </label>
-
-                        <div class='row-2'>
-                            <label>Base de Receta (opcional)
-                                <select id='prepRecetaSelect'>
-                                    <option value=''>-- Sin receta base (a medida) --</option>
-                                </select>
-                            </label>
-                            <label>Multiplicador / Tandas
-                                <input type='number' id='prepMultiplicador' step='0.5' min='0.5' value='1'>
-                            </label>
-                        </div>
-
-                        <div class='row-2'>
-                            <label>Categoría
-                                <select id='prepTipo'>
-                                    <option value='Pastelería'>Pastelería / Torta</option>
-                                    <option value='Panadería'>Panadería / Facturas</option>
-                                    <option value='Personalizado'>Pedido Personalizado</option>
-                                    <option value='Otro'>Otro pedido</option>
-                                </select>
-                            </label>
-                            <label>Fecha de entrega
-                                <input type='date' id='prepFecha' required>
-                            </label>
-                        </div>
-
-                        <div class='sub-box'>
-                            <div class='sub-box-header'>
-                                <span>Insumos de este pedido (fijos + extras/a mano)</span>
-                                <button type='button' id='btnAddIngPedido' class='btn-mini'>+ Agregar insumo</button>
-                            </div>
-                            <div id='pedidoIngredientesEditor' class='ing-editor-list'></div>
-                            <div id='pedidoFaltantesPreview' class='faltantes-box hidden'></div>
-                        </div>
-
-                        <label>Detalles específicos / Decoración / Notas
-                            <textarea id='prepNotas' rows='2'
-                                placeholder='Ej: Relleno dulce de leche y crema, sin nueces, retirar 17:30...'></textarea>
-                        </label>
-
-                        <button type='submit' class='btn-primary full'>Agendar Preparación</button>
-                    </form>
-
-                    <h3 class='sub-title'>Próximas entregas</h3>
-                    <div id='listaPreparaciones' class='prep-list'></div>
-                </div>
-
-                <div class='panel'>
-                    <div class='cal-header'>
-                        <button id='prevMes' class='btn-icon'>◀</button>
-                        <h2 id='calMesTitulo'>Mes Año</h2>
-                        <button id='nextMes' class='btn-icon'>▶</button>
+        <!-- PESTAÑA RECETAS -->
+        <section id="tab-recetas" class="tab-content">
+            <div class="card">
+                <h3 style="margin-top:0">Nueva Receta Base</h3>
+                <form id="formReceta">
+                    <div class="form-grid">
+                        <input id="recNombre" type="text" placeholder="Nombre de la receta" required>
+                        <input id="recRendimiento" type="text" placeholder="Rendimiento (ej: 12 u)">
                     </div>
-                    <div class='cal-weekdays'>
-                        <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span>
+                    <div id="recetaIngredientesEditor"></div>
+                    <div class="topbar-actions" style="margin-top:8px">
+                        <button id="btnAddIngReceta" type="button">+ Ingrediente</button>
+                        <button class="btn-primary" type="submit">Guardar Receta</button>
                     </div>
-                    <div id='calGrid' class='cal-grid'></div>
-                    <div id='calDetalleDia' class='cal-detalle'>Seleccioná un día marcado para ver las entregas.</div>
+                </form>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 style="margin:0">Recetario</h3>
+                    <span id="countRecetas" class="hint">0 recetas</span>
                 </div>
+                <div id="listaRecetas"></div>
             </div>
         </section>
 
-        <section id='tab-recetas' class='tab-content'>
-            <div class='prep-grid'>
-                <div class='panel'>
-                    <h2>📖 Crear Receta Base</h2>
-                    <form id='formReceta' class='form-stack'>
-                        <label>Nombre de la receta
-                            <input type='text' id='recNombre' placeholder='Ej: Muffins Vainilla x12' required>
-                        </label>
-                        <label>Rendimiento / Nota base
-                            <input type='text' id='recRendimiento' placeholder='Ej: Rinde 12 unidades o 1 molde 20cm'>
-                        </label>
-
-                        <div class='sub-box'>
-                            <div class='sub-box-header'>
-                                <span>Ingredientes de la receta</span>
-                                <button type='button' id='btnAddIngReceta' class='btn-mini'>+ Ingrediente</button>
-                            </div>
-                            <div id='recetaIngredientesEditor' class='ing-editor-list'></div>
-                        </div>
-
-                        <button type='submit' class='btn-primary full'>Guardar Receta</button>
-                    </form>
-                </div>
-
-                <div class='panel'>
-                    <div class='panel-header'>
-                        <h2>Recetas Guardadas</h2>
-                        <span id='countRecetas' class='counter'>0 recetas</span>
+        <!-- PESTAÑA PREPARACIONES -->
+        <section id="tab-preparaciones" class="tab-content">
+            <div class="card">
+                <h3 style="margin-top:0">Nueva Preparación / Pedido</h3>
+                <form id="formPreparacion">
+                    <div class="form-grid">
+                        <input id="prepProducto" type="text" placeholder="Producto (ej: Torta Brownie)" required>
+                        <select id="prepTipo">
+                            <option value="Pedido">Pedido</option>
+                            <option value="Producción">Producción</option>
+                        </select>
+                        <input id="prepFecha" type="date" required>
+                        <input id="prepNotas" type="text" placeholder="Notas (opcional)">
                     </div>
-                    <div id='listaRecetas' class='recetas-list'></div>
-                </div>
+
+                    <div class="form-grid">
+                        <select id="prepRecetaSelect">
+                            <option value="">-- Sin receta base (a medida) --</option>
+                        </select>
+                        <input id="prepMultiplicador" type="number" step="0.25" min="0.25" value="1"
+                            placeholder="Multiplicador">
+                    </div>
+
+                    <div id="pedidoIngredientesEditor"></div>
+                    <button id="btnAddIngPedido" type="button" style="margin-top:6px">+ Insumo</button>
+
+                    <div id="pedidoFaltantesPreview" class="faltantes-box hidden"></div>
+
+                    <div style="margin-top:10px">
+                        <button class="btn-primary" type="submit">Agendar Preparación</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top:0">Agenda de Preparaciones</h3>
+                <div id="listaPreparaciones"></div>
             </div>
         </section>
 
-        <section id='tab-compras' class='tab-content'>
-            <div class='panel'>
-                <div class='panel-header'>
-                    <h2>🛒 Lista de Compras y Faltantes</h2>
-                    <div class='topbar-actions'>
-                        <button id='btnSincronizarFaltantes' class='btn-outline'>↻ Calcular faltantes de
-                            pedidos</button>
-                        <button id='btnLimpiarComprados' class='btn-outline'>Limpiar comprados</button>
-                    </div>
+        <!-- PESTAÑA CALENDARIO -->
+        <section id="tab-calendario" class="tab-content">
+            <div class="card">
+                <div class="cal-header">
+                    <button id="prevMes" type="button">‹</button>
+                    <strong id="calMesTitulo"></strong>
+                    <button id="nextMes" type="button">›</button>
+                </div>
+                <div id="calGrid" class="cal-grid"></div>
+                <div id="calDetalleDia" class="cal-detalle">Tocá un día para ver las entregas.</div>
+            </div>
+        </section>
+
+        <!-- PESTAÑA COMPRAS -->
+        <section id="tab-compras" class="tab-content">
+            <div class="card">
+                <h3 style="margin-top:0">Lista de Compras</h3>
+                <div class="topbar-actions" style="margin-bottom:12px">
+                    <button id="btnSincronizarFaltantes" type="button">🔄 Sumar Faltantes de Pedidos</button>
+                    <button id="btnLimpiarComprados" type="button">🧹 Limpiar Comprados</button>
                 </div>
 
-                <form id='formCompraManual' class='compra-inline'>
-                    <input type='text' id='compProducto'
-                        placeholder='Agregar otro insumo a comprar (ej: Harina Tasara 40)...' required>
-                    <input type='number' id='compCantidad' step='0.01' min='0.01' value='1' required>
-                    <select id='compUnidad'>
-                        <option value='kg'>kg</option>
-                        <option value='g'>g</option>
-                        <option value='L'>L</option>
-                        <option value='ml'>ml</option>
-                        <option value='un'>un</option>
+                <form id="formCompraManual" class="form-grid">
+                    <input id="compProducto" type="text" placeholder="Insumo a comprar" required>
+                    <input id="compCantidad" type="number" step="0.01" min="0.01" placeholder="Cantidad" required>
+                    <select id="compUnidad">
+                        <option value="kg">kg</option>
+                        <option value="g">g</option>
+                        <option value="L">L</option>
+                        <option value="ml">ml</option>
+                        <option value="un">un</option>
                     </select>
-                    <select id='compCategoria'>
-                        <option value='solido'>Sólido</option>
-                        <option value='liquido'>Líquido</option>
+                    <select id="compCategoria">
+                        <option value="solido">Sólido</option>
+                        <option value="liquido">Líquido</option>
                     </select>
-                    <button type='submit' class='btn-primary'>+ Sumar</button>
+                    <button class="btn-primary" type="submit">Agregar</button>
                 </form>
 
-                <div id='listaCompras' class='compras-list'></div>
+                <div id="listaCompras"></div>
             </div>
         </section>
     </main>
 
-    <div id='modalEscaner' class='modal hidden'>
-        <div class='modal-card'>
-            <div class='modal-header'>
-                <h2>Ingreso de Insumos</h2>
-                <button id='btnCerrarModal' class='btn-icon'>✕</button>
+    <!-- MODAL ESCÁNER E INGRESO -->
+    <div id="modalEscaner" class="modal hidden">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Ingresar Mercadería</h3>
+                <button id="btnCerrarModal" class="btn-icon" type="button">✕</button>
             </div>
 
-            <div id='readerContainer'>
-                <div id='reader'></div>
-                <div class='scan-controls'>
-                    <button type='button' id='btnIniciarCamara' class='btn-outline'>📷 Activar Cámara</button>
-                    <button type='button' id='btnTomarFoto' class='btn-outline'>📸 Sacar Foto</button>
-                    <button type='button' id='btnSimularScan' class='btn-outline'>⚡ Simular Código</button>
-                    <input type='file' id='inpFotoCodigo' accept='image/*' capture='environment' class='hidden'>
-                </div>
+            <div class="scanner-controls">
+                <button id="btnIniciarCamara" type="button">📷 Activar Cámara</button>
+                <button id="btnTomarFoto" type="button">📸 Sacar Foto</button>
+                <button id="btnSimularScan" type="button">⚡ Simular Código</button>
+                <input id="inpFotoCodigo" type="file" accept="image/*" capture="environment" class="hidden">
             </div>
 
-            <form id='formIngreso' class='form-stack'>
-                <label>Código de Barras (EAN-13)
-                    <input type='text' id='inpCodigo' placeholder='Escaneá o escribí el código...' required>
-                </label>
-                <small id='estadoCodigo' class='hint'>Ingresá o escaneá un código para verificar si ya existe en tu
-                    catálogo.</small>
+            <div id="reader"></div>
+            <p id="estadoCodigo" class="hint">Ingresá o escaneá un código para verificar si ya existe en tu catálogo.
+            </p>
 
-                <div id='camposProductoNuevo'>
-                    <label>Nombre del Producto (ej: Harina Tasara 40)
-                        <input type='text' id='inpNombre' placeholder='Ej: Harina Tasara 40' required>
-                    </label>
-                    <div class='row-2'>
-                        <label>Tipo de Alimento
-                            <select id='inpCategoria'>
-                                <option value='solido'>Sólido (Harina, Azúcar, Chocolate)</option>
-                                <option value='liquido'>Líquido (Leche, Crema, Esencia)</option>
-                            </select>
-                        </label>
-                        <label>Unidad
-                            <select id='inpUnidad'>
-                                <option value='kg'>Kilogramos (kg)</option>
-                                <option value='g'>Gramos (g)</option>
-                                <option value='L'>Litros (L)</option>
-                                <option value='ml'>Mililitros (ml)</option>
-                                <option value='un'>Unidades</option>
-                            </select>
-                        </label>
-                    </div>
+            <form id="formIngreso">
+                <div class="form-grid">
+                    <input id="inpCodigo" type="text" placeholder="Código de Barras (EAN-13)" required>
+                    <input id="inpNombre" type="text" placeholder="Nombre del producto" required>
+                    <select id="inpCategoria">
+                        <option value="solido">Sólido</option>
+                        <option value="liquido">Líquido</option>
+                    </select>
+                    <select id="inpUnidad">
+                        <option value="kg">kg</option>
+                        <option value="g">g</option>
+                        <option value="L">L</option>
+                        <option value="ml">ml</option>
+                        <option value="un">un</option>
+                    </select>
+                    <input id="inpCantidad" type="number" step="0.01" min="0.01" placeholder="Cantidad" required>
+                    <input id="inpVencimiento" type="date" required>
                 </div>
 
-                <div class='row-2'>
-                    <label>Cantidad que ingresa (paquete habitual)
-                        <input type='number' id='inpCantidad' step='0.01' min='0.01' value='1' required>
-                    </label>
-                    <label>Fecha de Vencimiento
-                        <input type='date' id='inpVencimiento' required>
-                    </label>
+                <div class="atajos-fecha">
+                    <button type="button" data-dias="15">+15 días</button>
+                    <button type="button" data-dias="30">+30 días</button>
+                    <button type="button" data-dias="60">+60 días</button>
+                    <button type="button" data-dias="120">+120 días</button>
                 </div>
 
-                <div class='atajos-fecha'>
-                    <span>Atajos:</span>
-                    <button type='button' data-dias='30'>+1 Mes</button>
-                    <button type='button' data-dias='60'>+2 Meses</button>
-                    <button type='button' data-dias='180'>+6 Meses</button>
-                    <button type='button' data-dias='365'>+1 Año</button>
-                </div>
-
-                <button type='submit' class='btn-primary full'>Guardar Lote en Stock</button>
+                <button class="btn-primary" type="submit" style="width:100%">Guardar Lote en Stock</button>
             </form>
         </div>
     </div>
 
-    <div id='modalProducir' class='modal hidden'>
-        <div class='modal-card'>
-            <div class='modal-header'>
-                <h2 id='tituloModalProducir'>Confirmar Consumo Real</h2>
-                <button id='btnCerrarProducir' class='btn-icon'>✕</button>
+    <!-- MODAL PRODUCIR / DESCUENTO FEFO -->
+    <div id="modalProducir" class="modal hidden">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="tituloModalProducir">Producir</h3>
+                <button id="btnCerrarProducir" class="btn-icon" type="button">✕</button>
             </div>
-            <p class='hint' style='margin-bottom: 10px;'>
-                Ajustá lo que realmente gastaste en esta preparación (ideal para tortas personalizadas o extras). Al
-                confirmar se descuenta del lote más próximo a vencer (FEFO).
-            </p>
-            <div id='listaConsumoReal' class='form-stack'></div>
-            <div class='topbar-actions' style='margin-top: 14px; justify-content: flex-end;'>
-                <button type='button' id='btnAddExtraConsumo' class='btn-outline'>+ Extra gastado</button>
-                <button type='button' id='btnConfirmarDescuentoFEFO' class='btn-primary'>Descontar Stock y Marcar
-                    Listo</button>
+            <p class="hint">Ajustá si usaste más o menos insumo y descontá del lote más próximo a vencer (FEFO).</p>
+            <div id="listaConsumoReal"></div>
+            <div class="topbar-actions" style="margin-top:10px">
+                <button id="btnAddExtraConsumo" type="button">+ Insumo extra</button>
+                <button id="btnConfirmarDescuentoFEFO" class="btn-primary" type="button">Confirmar y Descontar</button>
             </div>
         </div>
     </div>
 
-    <script src='app.js'></script>
+    <!-- Librerías de lectura de códigos -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
+    <script src="app.js"></script>
 </body>
 
 </html>
