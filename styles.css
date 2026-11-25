@@ -1,18 +1,18 @@
 :root {
-    --bg: #faf8f7;
-    --surface: #ffffff;
-    --border: #eae4e2;
-    --text: #2d2928;
-    --muted: #7a7270;
-    --accent: #f3dedb;
-    --accent-dark: #d99b93;
-    --primary: #3b3332;
-    --verde-bg: #e7f6ec;
-    --verde-txt: #1e6b3a;
-    --amarillo-bg: #fef6e0;
-    --amarillo-txt: #8a6100;
-    --rojo-bg: #fdeaea;
-    --rojo-txt: #a62626;
+    --bg: #f6f3ef;
+    --surface: #fdfcfb;
+    --border: #e5dfd7;
+    --text: #2e2d2c;
+    --muted: #6e6965;
+    --accent: #e6ddd3;
+    --accent-dark: #b8a38e;
+    --primary: #3a3735;
+    --verde-bg: #e7efe9;
+    --verde-txt: #2e5a42;
+    --amarillo-bg: #f7efe0;
+    --amarillo-txt: #7d5d24;
+    --rojo-bg: #f4e4e1;
+    --rojo-txt: #8f3b34;
     --radius: 12px;
 }
 
@@ -30,20 +30,19 @@ body {
     overflow-x: hidden;
 }
 
-/* Encabezado superior estético con logo centrado y campana de silueta */
+/* Encabezado compacto con logo de 350px y campana de silueta */
 .topbar {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    padding: 14px 24px;
-    min-height: 112px;
+    padding: 6px 20px;
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: 42px 1fr 42px;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     position: sticky;
     top: 0;
     z-index: 10;
-    box-shadow: 0 2px 12px rgba(45, 41, 40, 0.03);
+    box-shadow: 0 2px 12px rgba(46, 45, 44, 0.03);
 }
 
 .topbar-spacer {
@@ -54,17 +53,16 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 100%;
 }
 
 .brand-logo {
-    height: 92px;
-    width: auto;
-    max-width: 320px;
+    width: 350px;
+    max-width: 100%;
+    height: auto;
+    max-height: 140px;
     object-fit: contain;
     display: block;
-    border-radius: 14px;
-    padding: 4px 10px;
-    background: #fdfbfa;
 }
 
 .topbar-actions {
@@ -79,8 +77,8 @@ body {
     background: var(--bg);
     border: 1px solid var(--border);
     color: var(--text);
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
@@ -97,8 +95,8 @@ body {
 }
 
 .bell-icon {
-    width: 21px;
-    height: 21px;
+    width: 20px;
+    height: 20px;
     display: block;
 }
 
@@ -112,7 +110,7 @@ body {
 /* Botones y badges */
 .btn-primary {
     background: var(--primary);
-    color: #fff;
+    color: #fdfcfb;
     border: none;
     padding: 10px 18px;
     border-radius: 10px;
@@ -176,6 +174,7 @@ body {
     cursor: pointer;
     font-size: 0.82rem;
     flex-shrink: 0;
+    color: var(--text);
 }
 
 .btn-icon:hover {
@@ -187,7 +186,7 @@ body {
     top: -3px;
     right: -3px;
     background: var(--rojo-txt);
-    color: #ffffff;
+    color: #fdfcfb;
     font-size: 0.68rem;
     font-weight: 600;
     min-width: 18px;
@@ -256,7 +255,7 @@ body {
 .tabs {
     display: flex;
     gap: 6px;
-    padding: 14px 24px 0;
+    padding: 12px 24px 0;
     max-width: 1200px;
     margin: 0 auto;
     flex-wrap: wrap;
@@ -364,13 +363,13 @@ body {
 }
 
 .lote-card.amarillo {
-    border-left-color: #d99b00;
-    background: #fffdf7;
+    border-left-color: var(--amarillo-txt);
+    background: #fdfaf2;
 }
 
 .lote-card.rojo {
     border-left-color: var(--rojo-txt);
-    background: #fff9f9;
+    background: #fcf7f6;
 }
 
 .lote-info {
@@ -420,6 +419,7 @@ body {
 .btn-consumir {
     background: var(--bg);
     border: 1px solid var(--border);
+    color: var(--text);
     padding: 6px 10px;
     border-radius: 6px;
     cursor: pointer;
@@ -605,7 +605,7 @@ textarea {
 }
 
 .prep-item.listo {
-    opacity: 0.72;
+    opacity: 0.74;
     background: var(--bg);
 }
 
@@ -649,7 +649,7 @@ textarea {
 .modal {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.45);
+    background: rgba(46, 45, 44, 0.42);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -702,6 +702,7 @@ textarea {
 
 .atajos-fecha button {
     background: var(--accent);
+    color: var(--text);
     border: none;
     padding: 5px 9px;
     border-radius: 6px;
@@ -712,13 +713,13 @@ textarea {
 /* Responsivo tablet */
 @media (max-width: 900px) {
     .topbar {
-        padding: 12px 16px;
-        min-height: 98px;
+        padding: 6px 14px;
     }
 
     .brand-logo {
-        height: 78px;
-        max-width: 270px;
+        width: 350px;
+        max-width: 100%;
+        max-height: 125px;
     }
 
     .compra-inline {
@@ -729,20 +730,28 @@ textarea {
 /* Responsivo celular */
 @media (max-width: 768px) {
     .topbar {
-        grid-template-columns: 44px 1fr 44px;
-        padding: 12px 14px;
-        min-height: 96px;
+        grid-template-columns: 1fr auto;
+        padding: 6px 12px;
         gap: 8px;
     }
 
+    .topbar-spacer {
+        display: none;
+    }
+
+    .brand {
+        justify-content: center;
+    }
+
     .brand-logo {
-        height: 76px;
-        max-width: 245px;
+        width: 350px;
+        max-width: 100%;
+        max-height: 115px;
     }
 
     .btn-bell {
-        width: 40px;
-        height: 40px;
+        width: 38px;
+        height: 38px;
     }
 
     .stock-toolbar {
