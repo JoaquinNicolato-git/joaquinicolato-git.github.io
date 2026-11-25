@@ -35,6 +35,10 @@ let camaraActiva = false;
 let reenfoqueEnCurso = false;
 let pedidoEnProduccionId = null;
 
+// Diccionario de detecciones (inspirado en el video, adaptado a 3 lecturas para agilidad)
+let detecciones = {};
+const UMBRAL_CONFIRMACION = 3;
+
 function guardarTodo() {
     localStorage.setItem('cookstock_catalogo', JSON.stringify(catalogo));
     localStorage.setItem('cookstock_lotes', JSON.stringify(lotes));
@@ -54,6 +58,24 @@ function calcularDiasHastaFecha(fechaStr) {
     hoy.setHours(0, 0, 0, 0);
     const objetivo = new Date(fechaStr + 'T00:00:00');
     return Math.ceil((objetivo - hoy) / (1000 * 60 * 60 * 24));
+}
+
+function reproducirBeepConfirmacion() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1046.5, ctx.currentTime);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.14);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15);
+    } catch (_) { }
 }
 
 // --- CONVERSIÓN, FORMATO LEGIBLE Y COINCIDENCIA DE MARCA/INSUMO ---
@@ -419,11 +441,13 @@ const readerEl = document.getElementById('reader');
 document.getElementById('btnAbrirEscaner').addEventListener('click', () => {
     modalEscaner.classList.remove('hidden');
     document.getElementById('inpVencimiento').value = sumarDiasHoy(30);
+    detecciones = {};
 });
 document.getElementById('btnCerrarModal').addEventListener('click', cerrarModalEscaner);
 
 function detenerCamaraSegura() {
     camaraActiva = false;
+    detecciones = {};
     if (html5QrcodeScanner) {
         const instancia = html5QrcodeScanner;
         html5QrcodeScanner = null;
@@ -470,7 +494,44 @@ function buscarEnCatalogo(codigo, avisoRecienLeido = false) {
     }
 }
 
-async function iniciarCamaraEscaner(mensajeEstado = '📷 Tocá la zona de cámara para reenfocar si hace falta.') {
+function confirmarCodigoDetectado(codigoCrudo, inmediata = false) {
+    const limpio = (codigoCrudo || '').replace(/\D/g, '').trim() || (codigoCrudo || '').trim();
+    if (!limpio || limpio.length < 7) return;
+
+    const estado = document.getElementById('estadoCodigo');
+
+    if (inmediata) {
+        detecciones = {};
+        reproducirBeepConfirmacion();
+        if (navigator.vibrate) navigator.vibrate(100);
+        inpCodigo.value = limpio;
+        inpCodigo.dispatchEvent(new Event('input', { bubbles: true }));
+        buscarEnCatalogo(limpio, true);
+        detenerCamaraSegura();
+        return;
+    }
+
+    if (detecciones[limpio]) {
+        detecciones[limpio] += 1;
+    } else {
+        detecciones = { [limpio]: 1 };
+    }
+
+    if (detecciones[limpio] >= UMBRAL_CONFIRMACION) {
+        detecciones = {};
+        reproducirBeepConfirmacion();
+        if (navigator.vibrate) navigator.vibrate(100);
+        inpCodigo.value = limpio;
+        inpCodigo.dispatchEvent(new Event('input', { bubbles: true }));
+        buscarEnCatalogo(limpio, true);
+        detenerCamaraSegura();
+    } else {
+        estado.textContent = `🔍 Confirmando ${limpio} (${detecciones[limpio]}/${UMBRAL_CONFIRMACION})... mantené firme.`;
+        estado.style.color = '';
+    }
+}
+
+async function iniciarCamaraEscaner(mensajeEstado = '📷 Tocá la cámara para reenfocar. Confirmación en 3 lecturas.') {
     if (typeof Html5Qrcode === 'undefined') {
         alert('No se cargó la librería del escáner. Verificá tu conexión a internet.');
         return;
@@ -500,7 +561,7 @@ async function iniciarCamaraEscaner(mensajeEstado = '📷 Tocá la zona de cáma
         await html5QrcodeScanner.start(
             { facingMode: "environment" },
             {
-                fps: 10,
+                fps: 12,
                 qrbox: (viewfinderWidth, viewfinderHeight) => {
                     const ancho = Math.min(340, Math.max(220, Math.floor(viewfinderWidth * 0.85)));
                     const alto = Math.min(180, Math.max(120, Math.floor(viewfinderHeight * 0.45)));
@@ -512,14 +573,7 @@ async function iniciarCamaraEscaner(mensajeEstado = '📷 Tocá la zona de cáma
                 }
             },
             (decodedText) => {
-                const limpio = (decodedText || '').replace(/\D/g, '').trim() || (decodedText || '').trim();
-                if (!limpio || limpio.length < 7) return;
-
-                if (navigator.vibrate) navigator.vibrate(100);
-                inpCodigo.value = limpio;
-                inpCodigo.dispatchEvent(new Event('input', { bubbles: true }));
-                buscarEnCatalogo(limpio, true);
-                detenerCamaraSegura();
+                confirmarCodigoDetectado(decodedText, false);
             }
         );
         camaraActiva = true;
@@ -555,8 +609,6 @@ async function intentarReenfocarEnToque() {
         }
     } catch (_) { }
 
-    // En varios teléfonos el navegador no expone control de foco por constraints:
-    // reiniciar el flujo de cámara dispara un nuevo ciclo de enfoque del dispositivo.
     if (!aplicoConstraint && html5QrcodeScanner) {
         try {
             await html5QrcodeScanner.stop();
@@ -579,8 +631,39 @@ if (readerEl) {
 }
 
 document.getElementById('btnIniciarCamara').addEventListener('click', () => {
-    iniciarCamaraEscaner('📷 Tocá la zona de cámara para reenfocar y acercá/alejá hasta que se vea nítido.');
+    iniciarCamaraEscaner('📷 Tocá la cámara para reenfocar. Confirmación en 3 lecturas.');
 });
+
+// Respaldo con foto nítida desde el iPhone si hace falta
+const inpFotoCodigo = document.getElementById('inpFotoCodigo');
+const btnTomarFoto = document.getElementById('btnTomarFoto');
+if (btnTomarFoto && inpFotoCodigo) {
+    btnTomarFoto.addEventListener('click', () => {
+        inpFotoCodigo.value = '';
+        inpFotoCodigo.click();
+    });
+
+    inpFotoCodigo.addEventListener('change', async (e) => {
+        const archivo = e.target.files && e.target.files[0];
+        if (!archivo) return;
+        if (typeof Html5Qrcode === 'undefined') {
+            alert('No se cargó la librería del escáner.');
+            return;
+        }
+        detenerCamaraSegura();
+        const estado = document.getElementById('estadoCodigo');
+        estado.textContent = '📸 Analizando foto...';
+        estado.style.color = '';
+        try {
+            const lectorFoto = new Html5Qrcode("reader", { verbose: false });
+            const resultado = await lectorFoto.scanFile(archivo, true);
+            confirmarCodigoDetectado(resultado, true);
+        } catch (_) {
+            estado.textContent = '⚠️ No se pudo leer el código en la foto. Probá acercando un poco más o escribí el código.';
+            estado.style.color = '#7d5d24';
+        }
+    });
+}
 
 document.getElementById('btnSimularScan').addEventListener('click', () => {
     const demos = Object.keys(catalogo).concat(['7798888999900']);
