@@ -27,18 +27,19 @@ body {
     background: var(--bg);
     color: var(--text);
     line-height: 1.4;
+    overflow-x: hidden;
 }
 
 /* Encabezado superior y logo */
 .topbar {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    padding: 6px 24px;
-    min-height: 84px;
+    padding: 10px 24px;
+    min-height: 76px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
     position: sticky;
     top: 0;
     z-index: 10;
@@ -48,22 +49,20 @@ body {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    overflow: visible;
+    flex-shrink: 0;
 }
 
 .brand-logo {
-    width: 190px;
-    height: 104px;
-    object-fit: cover;
-    object-position: center;
-    transform: scale(1.38);
-    transform-origin: left center;
+    height: 56px;
+    width: auto;
+    max-width: 195px;
+    object-fit: contain;
     display: block;
 }
 
 .topbar-actions {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
     justify-content: flex-end;
     flex-wrap: wrap;
@@ -74,12 +73,13 @@ body {
     background: var(--primary);
     color: #fff;
     border: none;
-    padding: 9px 16px;
+    padding: 9px 15px;
     border-radius: 8px;
     font-weight: 500;
     cursor: pointer;
     transition: opacity 0.2s;
     white-space: nowrap;
+    font-size: 0.88rem;
 }
 
 .btn-primary:hover {
@@ -111,11 +111,12 @@ body {
     background: var(--accent);
     color: var(--text);
     border: none;
-    padding: 5px 10px;
+    padding: 6px 10px;
     border-radius: 6px;
     font-size: 0.78rem;
     font-weight: 600;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .btn-mini:hover {
@@ -126,9 +127,10 @@ body {
     background: none;
     border: 1px solid var(--border);
     border-radius: 6px;
-    padding: 4px 9px;
+    padding: 5px 9px;
     cursor: pointer;
     font-size: 0.82rem;
+    flex-shrink: 0;
 }
 
 .btn-icon:hover {
@@ -171,6 +173,7 @@ body {
     align-items: center;
     margin-bottom: 10px;
     font-size: 0.92rem;
+    gap: 10px;
 }
 
 .alertas-lista {
@@ -200,7 +203,7 @@ body {
 .tabs {
     display: flex;
     gap: 6px;
-    padding: 16px 24px 0;
+    padding: 14px 24px 0;
     max-width: 1200px;
     margin: 0 auto;
     flex-wrap: wrap;
@@ -214,7 +217,8 @@ body {
     cursor: pointer;
     color: var(--muted);
     font-weight: 500;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
+    white-space: nowrap;
 }
 
 .tab-btn.active {
@@ -233,7 +237,7 @@ body {
 
 .tab-content {
     display: none;
-    padding-top: 20px;
+    padding-top: 18px;
 }
 
 .tab-content.active {
@@ -252,6 +256,7 @@ body {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 20px;
+    min-width: 0;
 }
 
 .panel-header {
@@ -315,6 +320,10 @@ body {
     background: #fff9f9;
 }
 
+.lote-info {
+    min-width: 0;
+}
+
 .lote-info h4 {
     font-size: 0.95rem;
     margin-bottom: 3px;
@@ -329,6 +338,7 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .dias-tag {
@@ -357,10 +367,11 @@ body {
 .btn-consumir {
     background: var(--bg);
     border: 1px solid var(--border);
-    padding: 5px 9px;
+    padding: 6px 10px;
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.8rem;
+    white-space: nowrap;
 }
 
 .btn-consumir:hover {
@@ -392,6 +403,7 @@ textarea {
     font-size: 0.88rem;
     background: var(--bg);
     color: var(--text);
+    min-width: 0;
 }
 
 .row-2 {
@@ -419,6 +431,7 @@ textarea {
     font-size: 0.82rem;
     font-weight: 600;
     margin-bottom: 8px;
+    gap: 8px;
 }
 
 .ing-editor-list {
@@ -623,6 +636,7 @@ textarea {
     display: flex;
     gap: 8px;
     margin-bottom: 10px;
+    flex-wrap: wrap;
 }
 
 .atajos-fecha {
@@ -636,23 +650,22 @@ textarea {
 .atajos-fecha button {
     background: var(--accent);
     border: none;
-    padding: 4px 8px;
+    padding: 5px 9px;
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.78rem;
 }
 
-/* Responsivo */
+/* Responsivo tablet */
 @media (max-width: 900px) {
     .topbar {
-        padding: 8px 14px;
+        padding: 10px 14px;
         gap: 10px;
     }
 
     .brand-logo {
-        width: 170px;
-        height: 92px;
-        transform: scale(1.32);
+        height: 48px;
+        max-width: 150px;
     }
 
     .compra-inline {
@@ -660,15 +673,109 @@ textarea {
     }
 }
 
+/* Responsivo celular */
 @media (max-width: 768px) {
+    .topbar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 10px 12px;
+        gap: 8px;
+        min-height: auto;
+    }
+
+    .brand {
+        justify-content: space-between;
+    }
+
+    .brand-logo {
+        height: 44px;
+        max-width: 155px;
+    }
+
+    .topbar-actions {
+        justify-content: flex-end;
+        width: 100%;
+    }
+
+    .topbar-actions .btn-primary {
+        flex: 1;
+        text-align: center;
+    }
+
+    .tabs {
+        padding: 10px 12px 0;
+        gap: 6px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .tab-btn {
+        padding: 9px 12px;
+        font-size: 0.82rem;
+        border-radius: 8px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+    }
+
+    .tab-btn.active {
+        background: var(--accent);
+        color: var(--text);
+        border-color: var(--accent-dark);
+    }
+
+    .container {
+        padding: 0 12px 32px;
+    }
+
+    .panel {
+        padding: 14px;
+    }
 
     .split-grid,
     .prep-grid,
     .row-2 {
         grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .lote-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .lote-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .prep-item,
+    .receta-card,
+    .compra-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
     }
 
     .ing-row {
-        grid-template-columns: 1fr 0.7fr 0.7fr auto;
+        grid-template-columns: 1fr 0.75fr 0.75fr auto;
+    }
+
+    .compra-inline {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .compra-inline input[type="text"] {
+        grid-column: 1 / -1;
+    }
+
+    .compra-inline button[type="submit"] {
+        grid-column: 1 / -1;
     }
 }

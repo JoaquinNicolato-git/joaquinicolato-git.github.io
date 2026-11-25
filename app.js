@@ -64,7 +64,6 @@ function convertirUnidad(cantidad, deUnidad, aUnidad) {
     return cantidad;
 }
 
-// Formatea cantidades en kg -> "4 kg 750 g" o "750 g", y L -> "1 L 250 ml" o "250 ml"
 function formatearCantidadDetallada(cantidad, unidad) {
     const limpia = +Number(cantidad || 0).toFixed(4);
     if (unidad === 'kg') {
@@ -88,7 +87,6 @@ function normalizarNombre(str) {
     return (str || '').trim().toLowerCase();
 }
 
-// Busca si el insumo de receta (ej: "Harina") coincide con un producto específico en stock/catálogo/compras (ej: "Harina Tasara 40")
 function resolverProductoEspecifico(nombreBuscado) {
     const clave = normalizarNombre(nombreBuscado);
     if (!clave) return null;
@@ -150,7 +148,6 @@ function resolverProductoEspecifico(nombreBuscado) {
     return null;
 }
 
-// Convierte el faltante exacto a presentación habitual de compra (ej: 1 kg de Harina Tasara 40)
 function ajustarACompraHabitual(nombreEspecifico, faltanteCant, faltanteUni) {
     const resuelto = resolverProductoEspecifico(nombreEspecifico);
     const categoria = resuelto?.categoria || 'solido';
