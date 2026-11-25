@@ -442,6 +442,7 @@ document.getElementById('btnAbrirEscaner').addEventListener('click', () => {
     modalEscaner.classList.remove('hidden');
     document.getElementById('inpVencimiento').value = sumarDiasHoy(30);
     detecciones = {};
+    if (readerEl) readerEl.innerHTML = '';
 });
 document.getElementById('btnCerrarModal').addEventListener('click', cerrarModalEscaner);
 
@@ -457,7 +458,11 @@ function detenerCamaraSegura() {
                 prom.catch(() => { });
             }
         } catch (_) { }
+        try {
+            instancia.clear();
+        } catch (_) { }
     }
+    if (readerEl) readerEl.innerHTML = '';
 }
 
 function cerrarModalEscaner() {
@@ -634,6 +639,45 @@ document.getElementById('btnIniciarCamara').addEventListener('click', () => {
     iniciarCamaraEscaner('📷 Tocá la cámara para reenfocar. Confirmación en 3 lecturas.');
 });
 
+async function leerCodigoDesdeArchivo(archivo) {
+    if ('BarcodeDetector' in window) {
+        try {
+            const detector = new window.BarcodeDetector({
+                formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128']
+            });
+            const bitmap = await createImageBitmap(archivo);
+            const codigos = await detector.detect(bitmap);
+            if (codigos && codigos.length > 0 && codigos[0].rawValue) {
+                return codigos[0].rawValue;
+            }
+
+            const maxAncho = 1600;
+            const escala = bitmap.width > maxAncho ? maxAncho / bitmap.width : 1;
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(bitmap.width * escala);
+            canvas.height = Math.round(bitmap.height * escala);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+            const codigosEscalados = await detector.detect(canvas);
+            if (codigosEscalados && codigosEscalados.length > 0 && codigosEscalados[0].rawValue) {
+                return codigosEscalados[0].rawValue;
+            }
+        } catch (_) { }
+    }
+
+    if (typeof Html5Qrcode !== 'undefined') {
+        const lectorFoto = new Html5Qrcode("reader", { verbose: false });
+        try {
+            return await lectorFoto.scanFile(archivo, false);
+        } finally {
+            try { lectorFoto.clear(); } catch (_) { }
+            if (readerEl) readerEl.innerHTML = '';
+        }
+    }
+
+    return null;
+}
+
 // Respaldo con foto nítida desde el iPhone si hace falta
 const inpFotoCodigo = document.getElementById('inpFotoCodigo');
 const btnTomarFoto = document.getElementById('btnTomarFoto');
@@ -646,20 +690,23 @@ if (btnTomarFoto && inpFotoCodigo) {
     inpFotoCodigo.addEventListener('change', async (e) => {
         const archivo = e.target.files && e.target.files[0];
         if (!archivo) return;
-        if (typeof Html5Qrcode === 'undefined') {
-            alert('No se cargó la librería del escáner.');
-            return;
-        }
+
         detenerCamaraSegura();
         const estado = document.getElementById('estadoCodigo');
         estado.textContent = '📸 Analizando foto...';
         estado.style.color = '';
+
         try {
-            const lectorFoto = new Html5Qrcode("reader", { verbose: false });
-            const resultado = await lectorFoto.scanFile(archivo, true);
-            confirmarCodigoDetectado(resultado, true);
+            const resultado = await leerCodigoDesdeArchivo(archivo);
+            if (resultado) {
+                confirmarCodigoDetectado(resultado, true);
+            } else {
+                estado.textContent = '⚠️ No se pudo leer el código en la foto. Acercá más la cámara al código y evitá reflejos, o escribí el número.';
+                estado.style.color = '#7d5d24';
+            }
         } catch (_) {
-            estado.textContent = '⚠️ No se pudo leer el código en la foto. Probá acercando un poco más o escribí el código.';
+            if (readerEl) readerEl.innerHTML = '';
+            estado.textContent = '⚠️ No se pudo leer el código en la foto. Acercá más la cámara al código y evitá reflejos, o escribí el número.';
             estado.style.color = '#7d5d24';
         }
     });
