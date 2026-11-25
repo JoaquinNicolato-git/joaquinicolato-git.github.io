@@ -536,7 +536,7 @@ function confirmarCodigoDetectado(codigoCrudo, inmediata = false) {
     }
 }
 
-async function iniciarCamaraEscaner(mensajeEstado = '📷 Tocá la cámara para reenfocar. Confirmación en 3 lecturas.') {
+async function iniciarCamaraEscaner(mensajeEstado = '📷 Mantené el teléfono a unos 15–20 cm y tocá para reenfocar.') {
     if (typeof Html5Qrcode === 'undefined') {
         alert('No se cargó la librería del escáner. Verificá tu conexión a internet.');
         return;
@@ -574,6 +574,8 @@ async function iniciarCamaraEscaner(mensajeEstado = '📷 Tocá la cámara para 
                 },
                 videoConstraints: {
                     facingMode: { ideal: "environment" },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
                     focusMode: { ideal: "continuous" }
                 }
             },
@@ -619,10 +621,10 @@ async function intentarReenfocarEnToque() {
             await html5QrcodeScanner.stop();
             html5QrcodeScanner = null;
             camaraActiva = false;
-            await iniciarCamaraEscaner('🎯 Reenfocando cámara... mantené el código firme.');
+            await iniciarCamaraEscaner('🎯 Reenfocando cámara... mantené a unos 15–20 cm.');
         } catch (_) { }
     } else if (camaraActiva) {
-        estado.textContent = '📷 Mantené el código estable dentro del recuadro para leerlo.';
+        estado.textContent = '📷 Mantené el código estable dentro del recuadro a unos 15–20 cm.';
     }
 
     reenfoqueEnCurso = false;
@@ -636,39 +638,73 @@ if (readerEl) {
 }
 
 document.getElementById('btnIniciarCamara').addEventListener('click', () => {
-    iniciarCamaraEscaner('📷 Tocá la cámara para reenfocar. Confirmación en 3 lecturas.');
+    iniciarCamaraEscaner('📷 Mantené el teléfono a unos 15–20 cm y tocá para reenfocar.');
 });
 
+function crearRecorteCentralCanvas(bitmap, proporcionAncho = 0.7, proporcionAlto = 0.45, anchoSalida = 1600) {
+    const sw = Math.max(1, Math.round(bitmap.width * proporcionAncho));
+    const sh = Math.max(1, Math.round(bitmap.height * proporcionAlto));
+    const sx = Math.max(0, Math.round((bitmap.width - sw) / 2));
+    const sy = Math.max(0, Math.round((bitmap.height - sh) / 2));
+
+    const canvas = document.createElement('canvas');
+    const escala = anchoSalida / sw;
+    canvas.width = Math.round(sw * escala);
+    canvas.height = Math.round(sh * escala);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    return canvas;
+}
+
 async function leerCodigoDesdeArchivo(archivo) {
-    if ('BarcodeDetector' in window) {
+    const formatosBarcode = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128'];
+    let bitmap = null;
+
+    try {
+        bitmap = await createImageBitmap(archivo);
+    } catch (_) { }
+
+    // 1) Intento con BarcodeDetector nativo (foto completa y recorte central con zoom)
+    if ('BarcodeDetector' in window && bitmap) {
         try {
-            const detector = new window.BarcodeDetector({
-                formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128']
-            });
-            const bitmap = await createImageBitmap(archivo);
-            const codigos = await detector.detect(bitmap);
-            if (codigos && codigos.length > 0 && codigos[0].rawValue) {
-                return codigos[0].rawValue;
+            const detector = new window.BarcodeDetector({ formats: formatosBarcode });
+
+            const codigosFull = await detector.detect(bitmap);
+            if (codigosFull && codigosFull.length > 0 && codigosFull[0].rawValue) {
+                return codigosFull[0].rawValue;
             }
 
-            const maxAncho = 1600;
-            const escala = bitmap.width > maxAncho ? maxAncho / bitmap.width : 1;
-            const canvas = document.createElement('canvas');
-            canvas.width = Math.round(bitmap.width * escala);
-            canvas.height = Math.round(bitmap.height * escala);
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-            const codigosEscalados = await detector.detect(canvas);
-            if (codigosEscalados && codigosEscalados.length > 0 && codigosEscalados[0].rawValue) {
-                return codigosEscalados[0].rawValue;
+            const recorteCentro = crearRecorteCentralCanvas(bitmap, 0.72, 0.45, 1600);
+            const codigosCentro = await detector.detect(recorteCentro);
+            if (codigosCentro && codigosCentro.length > 0 && codigosCentro[0].rawValue) {
+                return codigosCentro[0].rawValue;
+            }
+
+            const recorteAngosto = crearRecorteCentralCanvas(bitmap, 0.55, 0.3, 1600);
+            const codigosAngosto = await detector.detect(recorteAngosto);
+            if (codigosAngosto && codigosAngosto.length > 0 && codigosAngosto[0].rawValue) {
+                return codigosAngosto[0].rawValue;
             }
         } catch (_) { }
     }
 
+    // 2) Respaldo con Html5Qrcode.scanFile (original y recorte central)
     if (typeof Html5Qrcode !== 'undefined') {
         const lectorFoto = new Html5Qrcode("reader", { verbose: false });
         try {
-            return await lectorFoto.scanFile(archivo, false);
+            try {
+                return await lectorFoto.scanFile(archivo, false);
+            } catch (_) { }
+
+            if (bitmap) {
+                const canvas = crearRecorteCentralCanvas(bitmap, 0.72, 0.45, 1400);
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+                if (blob) {
+                    const archivoRecorte = new File([blob], 'recorte.jpg', { type: 'image/jpeg' });
+                    return await lectorFoto.scanFile(archivoRecorte, false);
+                }
+            }
+        } catch (_) {
         } finally {
             try { lectorFoto.clear(); } catch (_) { }
             if (readerEl) readerEl.innerHTML = '';
@@ -678,7 +714,7 @@ async function leerCodigoDesdeArchivo(archivo) {
     return null;
 }
 
-// Respaldo con foto nítida desde el iPhone si hace falta
+// Respaldo con foto nítida desde el iPhone a distancia cómoda (15–20 cm)
 const inpFotoCodigo = document.getElementById('inpFotoCodigo');
 const btnTomarFoto = document.getElementById('btnTomarFoto');
 if (btnTomarFoto && inpFotoCodigo) {
@@ -701,12 +737,12 @@ if (btnTomarFoto && inpFotoCodigo) {
             if (resultado) {
                 confirmarCodigoDetectado(resultado, true);
             } else {
-                estado.textContent = '⚠️ No se pudo leer el código en la foto. Acercá más la cámara al código y evitá reflejos, o escribí el número.';
+                estado.textContent = '⚠️ No se pudo leer el código. Probá a unos 15–20 cm con buena luz, sin reflejos o escribí el número.';
                 estado.style.color = '#7d5d24';
             }
         } catch (_) {
             if (readerEl) readerEl.innerHTML = '';
-            estado.textContent = '⚠️ No se pudo leer el código en la foto. Acercá más la cámara al código y evitá reflejos, o escribí el número.';
+            estado.textContent = '⚠️ No se pudo leer el código. Probá a unos 15–20 cm con buena luz, sin reflejos o escribí el número.';
             estado.style.color = '#7d5d24';
         }
     });
