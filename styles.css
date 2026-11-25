@@ -30,7 +30,7 @@ body {
     overflow-x: hidden;
 }
 
-/* Encabezado compacto con logo de 350px y campana de silueta */
+/* Encabezado superior estático (no acompaña el scroll) con logo centrado de 350px */
 .topbar {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
@@ -39,8 +39,7 @@ body {
     grid-template-columns: 42px 1fr 42px;
     align-items: center;
     gap: 10px;
-    position: sticky;
-    top: 0;
+    position: relative;
     z-index: 10;
     box-shadow: 0 2px 12px rgba(46, 45, 44, 0.03);
 }
@@ -730,17 +729,27 @@ textarea {
 /* Responsivo celular */
 @media (max-width: 768px) {
     .topbar {
-        grid-template-columns: 1fr auto;
-        padding: 6px 12px;
-        gap: 8px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        padding: 8px 12px;
     }
 
     .topbar-spacer {
         display: none;
     }
 
+    .topbar-actions {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
     .brand {
         justify-content: center;
+        padding: 0 46px;
     }
 
     .brand-logo {
