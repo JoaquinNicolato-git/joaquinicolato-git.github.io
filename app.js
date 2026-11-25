@@ -32,6 +32,8 @@ let compras = JSON.parse(localStorage.getItem('cookstock_compras')) || [];
 let fechaCalendario = new Date();
 let html5QrcodeScanner = null;
 let pedidoEnProduccionId = null;
+let ultimaLecturaCandidata = '';
+let contadorLecturaIgual = 0;
 
 function guardarTodo() {
     localStorage.setItem('cookstock_catalogo', JSON.stringify(catalogo));
@@ -416,22 +418,41 @@ const inpCodigo = document.getElementById('inpCodigo');
 document.getElementById('btnAbrirEscaner').addEventListener('click', () => {
     modalEscaner.classList.remove('hidden');
     document.getElementById('inpVencimiento').value = sumarDiasHoy(30);
+    ultimaLecturaCandidata = '';
+    contadorLecturaIgual = 0;
 });
 document.getElementById('btnCerrarModal').addEventListener('click', cerrarModalEscaner);
 
+function detenerCamaraSegura() {
+    if (html5QrcodeScanner) {
+        const instancia = html5QrcodeScanner;
+        html5QrcodeScanner = null;
+        try {
+            const prom = instancia.stop();
+            if (prom && typeof prom.catch === 'function') {
+                prom.catch(() => { });
+            }
+        } catch (_) { }
+    }
+    ultimaLecturaCandidata = '';
+    contadorLecturaIgual = 0;
+}
+
 function cerrarModalEscaner() {
     modalEscaner.classList.add('hidden');
-    if (html5QrcodeScanner) {
-        html5QrcodeScanner.stop().catch(() => { });
-        html5QrcodeScanner = null;
-    }
+    detenerCamaraSegura();
 }
 
 inpCodigo.addEventListener('input', () => buscarEnCatalogo(inpCodigo.value.trim()));
 
-function buscarEnCatalogo(codigo) {
+function buscarEnCatalogo(codigo, avisoRecienLeido = false) {
     const prod = catalogo[codigo];
     const estado = document.getElementById('estadoCodigo');
+    if (!codigo) {
+        estado.textContent = 'Ingresá o escaneá un código para verificar si ya existe en tu catálogo.';
+        estado.style.color = '';
+        return;
+    }
     if (prod) {
         document.getElementById('inpNombre').value = prod.nombre;
         document.getElementById('inpCategoria').value = prod.categoria;
@@ -439,24 +460,79 @@ function buscarEnCatalogo(codigo) {
         if (prod.compraHabitualCant) {
             document.getElementById('inpCantidad').value = prod.compraHabitualCant;
         }
-        estado.textContent = '✅ Producto encontrado en tu catálogo. Completá cantidad y vencimiento.';
-        estado.style.color = '#1e6b3a';
+        estado.textContent = avisoRecienLeido
+            ? '✅ Código detectado (en catálogo). Revisá cantidad/vencimiento y tocá "Guardar Lote en Stock".'
+            : '✅ Producto encontrado en tu catálogo. Completá cantidad y vencimiento.';
+        estado.style.color = '#2e5a42';
     } else {
-        estado.textContent = '🆕 Código nuevo: guardará el producto y su paquete habitual en tu catálogo.';
-        estado.style.color = '#8a6100';
+        estado.textContent = avisoRecienLeido
+            ? '🆕 Código detectado (nuevo). Completá nombre, cantidad y vencimiento, y tocá "Guardar Lote en Stock".'
+            : '🆕 Código nuevo: guardará el producto y su paquete habitual en tu catálogo.';
+        estado.style.color = '#7d5d24';
     }
 }
 
 document.getElementById('btnIniciarCamara').addEventListener('click', () => {
-    html5QrcodeScanner = new Html5Qrcode("reader");
+    if (typeof Html5Qrcode === 'undefined') {
+        alert('No se cargó la librería del escáner. Verificá tu conexión a internet.');
+        return;
+    }
+
+    detenerCamaraSegura();
+    ultimaLecturaCandidata = '';
+    contadorLecturaIgual = 0;
+
+    const formatosPermitidos = typeof Html5QrcodeSupportedFormats !== 'undefined'
+        ? [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.CODE_128
+        ]
+        : undefined;
+
+    html5QrcodeScanner = formatosPermitidos
+        ? new Html5Qrcode("reader", { formatsToSupport: formatosPermitidos, verbose: false })
+        : new Html5Qrcode("reader");
+
+    const estado = document.getElementById('estadoCodigo');
+    estado.textContent = '📷 Mantené el código estable dentro del recuadro para confirmar la lectura...';
+    estado.style.color = '';
+
     html5QrcodeScanner.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 120 } },
+        {
+            facingMode: "environment",
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            focusMode: "continuous"
+        },
+        {
+            fps: 12,
+            qrbox: { width: 280, height: 130 },
+            aspectRatio: 1.777778
+        },
         (decodedText) => {
+            const limpio = (decodedText || '').replace(/\D/g, '').trim() || (decodedText || '').trim();
+            if (!limpio || limpio.length < 8) return;
+
+            if (limpio === ultimaLecturaCandidata) {
+                contadorLecturaIgual += 1;
+            } else {
+                ultimaLecturaCandidata = limpio;
+                contadorLecturaIgual = 1;
+            }
+
+            if (contadorLecturaIgual < 2) {
+                estado.textContent = `🔍 Leyendo ${limpio}... mantené firme un instante para confirmar.`;
+                return;
+            }
+
             if (navigator.vibrate) navigator.vibrate(100);
-            inpCodigo.value = decodedText;
-            buscarEnCatalogo(decodedText);
-            html5QrcodeScanner.stop();
+            inpCodigo.value = limpio;
+            inpCodigo.dispatchEvent(new Event('input', { bubbles: true }));
+            buscarEnCatalogo(limpio, true);
+            detenerCamaraSegura();
         }
     ).catch(err => alert('No se pudo abrir la cámara (verificá permisos o HTTPS): ' + err));
 });
@@ -465,7 +541,7 @@ document.getElementById('btnSimularScan').addEventListener('click', () => {
     const demos = Object.keys(catalogo).concat(['7798888999900']);
     const elegido = demos[Math.floor(Math.random() * demos.length)];
     inpCodigo.value = elegido;
-    buscarEnCatalogo(elegido);
+    buscarEnCatalogo(elegido, true);
 });
 
 document.querySelectorAll('.atajos-fecha button').forEach(btn => {
@@ -483,6 +559,11 @@ document.getElementById('formIngreso').addEventListener('submit', (e) => {
     const cantidad = parseFloat(document.getElementById('inpCantidad').value);
     const vencimiento = document.getElementById('inpVencimiento').value;
 
+    if (!codigo || !nombre || !(cantidad > 0) || !vencimiento) {
+        alert('Completá código, nombre, cantidad mayor a 0 y fecha de vencimiento.');
+        return;
+    }
+
     catalogo[codigo] = {
         nombre,
         categoria,
@@ -496,6 +577,7 @@ document.getElementById('formIngreso').addEventListener('submit', (e) => {
     renderizarStock();
     renderizarPreparaciones();
     e.target.reset();
+    document.getElementById('estadoCodigo').textContent = '✅ Lote guardado en stock.';
     cerrarModalEscaner();
 });
 
