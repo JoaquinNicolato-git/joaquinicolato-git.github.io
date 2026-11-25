@@ -31,6 +31,8 @@ let preparaciones = JSON.parse(localStorage.getItem('cookstock_preparaciones')) 
 let compras = JSON.parse(localStorage.getItem('cookstock_compras')) || [];
 let fechaCalendario = new Date();
 let html5QrcodeScanner = null;
+let camaraActiva = false;
+let reenfoqueEnCurso = false;
 let pedidoEnProduccionId = null;
 
 function guardarTodo() {
@@ -412,6 +414,7 @@ document.getElementById('btnCerrarAlertas').addEventListener('click', () => {
 // --- ESCÁNER E INGRESO DE MERCADERÍA ---
 const modalEscaner = document.getElementById('modalEscaner');
 const inpCodigo = document.getElementById('inpCodigo');
+const readerEl = document.getElementById('reader');
 
 document.getElementById('btnAbrirEscaner').addEventListener('click', () => {
     modalEscaner.classList.remove('hidden');
@@ -420,6 +423,7 @@ document.getElementById('btnAbrirEscaner').addEventListener('click', () => {
 document.getElementById('btnCerrarModal').addEventListener('click', cerrarModalEscaner);
 
 function detenerCamaraSegura() {
+    camaraActiva = false;
     if (html5QrcodeScanner) {
         const instancia = html5QrcodeScanner;
         html5QrcodeScanner = null;
@@ -466,7 +470,7 @@ function buscarEnCatalogo(codigo, avisoRecienLeido = false) {
     }
 }
 
-document.getElementById('btnIniciarCamara').addEventListener('click', () => {
+async function iniciarCamaraEscaner(mensajeEstado = '📷 Tocá la zona de cámara para reenfocar si hace falta.') {
     if (typeof Html5Qrcode === 'undefined') {
         alert('No se cargó la librería del escáner. Verificá tu conexión a internet.');
         return;
@@ -489,33 +493,93 @@ document.getElementById('btnIniciarCamara').addEventListener('click', () => {
         : new Html5Qrcode("reader");
 
     const estado = document.getElementById('estadoCodigo');
-    estado.textContent = '📷 Alejá un poco el producto hasta que el código se vea nítido dentro del recuadro.';
+    estado.textContent = mensajeEstado;
     estado.style.color = '';
 
-    html5QrcodeScanner.start(
-        { facingMode: "environment" },
-        {
-            fps: 10,
-            qrbox: (viewfinderWidth, viewfinderHeight) => {
-                const ancho = Math.min(340, Math.max(220, Math.floor(viewfinderWidth * 0.85)));
-                const alto = Math.min(180, Math.max(120, Math.floor(viewfinderHeight * 0.45)));
-                return { width: ancho, height: alto };
+    try {
+        await html5QrcodeScanner.start(
+            { facingMode: "environment" },
+            {
+                fps: 10,
+                qrbox: (viewfinderWidth, viewfinderHeight) => {
+                    const ancho = Math.min(340, Math.max(220, Math.floor(viewfinderWidth * 0.85)));
+                    const alto = Math.min(180, Math.max(120, Math.floor(viewfinderHeight * 0.45)));
+                    return { width: ancho, height: alto };
+                },
+                videoConstraints: {
+                    facingMode: { ideal: "environment" },
+                    focusMode: { ideal: "continuous" }
+                }
             },
-            videoConstraints: {
-                facingMode: { ideal: "environment" }
-            }
-        },
-        (decodedText) => {
-            const limpio = (decodedText || '').replace(/\D/g, '').trim() || (decodedText || '').trim();
-            if (!limpio || limpio.length < 7) return;
+            (decodedText) => {
+                const limpio = (decodedText || '').replace(/\D/g, '').trim() || (decodedText || '').trim();
+                if (!limpio || limpio.length < 7) return;
 
-            if (navigator.vibrate) navigator.vibrate(100);
-            inpCodigo.value = limpio;
-            inpCodigo.dispatchEvent(new Event('input', { bubbles: true }));
-            buscarEnCatalogo(limpio, true);
-            detenerCamaraSegura();
+                if (navigator.vibrate) navigator.vibrate(100);
+                inpCodigo.value = limpio;
+                inpCodigo.dispatchEvent(new Event('input', { bubbles: true }));
+                buscarEnCatalogo(limpio, true);
+                detenerCamaraSegura();
+            }
+        );
+        camaraActiva = true;
+    } catch (err) {
+        camaraActiva = false;
+        alert('No se pudo abrir la cámara (verificá permisos o HTTPS): ' + err);
+    }
+}
+
+async function intentarReenfocarEnToque() {
+    if (!camaraActiva || reenfoqueEnCurso || !readerEl) return;
+    reenfoqueEnCurso = true;
+    const estado = document.getElementById('estadoCodigo');
+    estado.textContent = '🎯 Reenfocando cámara...';
+
+    let aplicoConstraint = false;
+    try {
+        const video = readerEl.querySelector('video');
+        const track = video && video.srcObject && typeof video.srcObject.getVideoTracks === 'function'
+            ? video.srcObject.getVideoTracks()[0]
+            : null;
+
+        if (track && typeof track.applyConstraints === 'function') {
+            try {
+                await track.applyConstraints({ advanced: [{ focusMode: 'single-shot' }] });
+                aplicoConstraint = true;
+            } catch (_) { }
+
+            try {
+                await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+                aplicoConstraint = true;
+            } catch (_) { }
         }
-    ).catch(err => alert('No se pudo abrir la cámara (verificá permisos o HTTPS): ' + err));
+    } catch (_) { }
+
+    // En varios teléfonos el navegador no expone control de foco por constraints:
+    // reiniciar el flujo de cámara dispara un nuevo ciclo de enfoque del dispositivo.
+    if (!aplicoConstraint && html5QrcodeScanner) {
+        try {
+            await html5QrcodeScanner.stop();
+            html5QrcodeScanner = null;
+            camaraActiva = false;
+            await iniciarCamaraEscaner('🎯 Reenfocando cámara... mantené el código firme.');
+        } catch (_) { }
+    } else if (camaraActiva) {
+        estado.textContent = '📷 Mantené el código estable dentro del recuadro para leerlo.';
+    }
+
+    reenfoqueEnCurso = false;
+}
+
+if (readerEl) {
+    readerEl.style.cursor = 'pointer';
+    readerEl.addEventListener('click', () => {
+        intentarReenfocarEnToque();
+    });
+}
+
+document.getElementById('btnIniciarCamara').addEventListener('click', () => {
+    iniciarCamaraEscaner('📷 Tocá la zona de cámara para reenfocar y acercá/alejá hasta que se vea nítido.');
 });
 
 document.getElementById('btnSimularScan').addEventListener('click', () => {
